@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Video Editor Example</title>
+<style>
+  body { background: #111; color: #fff; font-family: Arial; text-align: center; }
+  video, canvas { border: 2px solid #444; margin: 10px auto; display: block; max-width: 90%; }
+  .controls { margin-top: 10px; }
+  input[type="range"] { width: 150px; }
+  button { margin: 5px; padding: 8px 12px; border-radius: 6px; border: none; background: #444; color: white; cursor: pointer; }
+  button:hover { background: #666; }
+</style>
+</head>
+<body>
+
+<h1>YouTube Video Editor Example</h1>
+<input type="file" id="videoUpload" accept="video/*"><br>
+<video id="video" controls></video>
+<canvas id="canvas" width="640" height="360"></canvas>
+
+<div class="controls">
+  <label>Brightness: <span id="brightnessVal">100%</span></label>
+  <input type="range" id="brightness" min="0" max="200" value="100">
+  
+  <label>Rotate: <span id="rotateVal">0°</span></label>
+  <input type="range" id="rotate" min="0" max="360" value="0">
+
+  <button id="flipHBtn">Flip Horizontal</button>
+  <button id="flipVBtn">Flip Vertical</button>
+  <button id="grayscaleBtn">Grayscale</button>
+  <button id="invertBtn">Invert</button>
+</div>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let flipH = false, flipV = false;
+let grayscaleActive = false;
+let invertActive = false;
+
+document.getElementById('videoUpload').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  video.src = url;
+});
+
+function drawCanvas() {
+  ctx.save();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.translate(canvas.width/2, canvas.height/2);
+  const rotateDeg = parseInt(document.getElementById('rotate').value);
+  ctx.rotate(rotateDeg * Math.PI / 180);
+  ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+  ctx.drawImage(video, -canvas.width/2, -canvas.height/2, canvas.width, canvas.height);
+  ctx.restore();
+
+  // Apply filters
+  let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  let data = imageData.data;
+  const brightness = parseInt(document.getElementById('brightness').value);
+  for (let i = 0; i < data.length; i += 4) {
+    // Brightness
+    data[i] = data[i] * brightness/100;
+    data[i+1] = data[i+1] * brightness/100;
+    data[i+2] = data[i+2] * brightness/100;
+
+    if (grayscaleActive) {
+      let avg = (data[i] + data[i+1] + data[i+2]) / 3;
+      data[i] = data[i+1] = data[i+2] = avg;
+    }
+
+    if (invertActive) {
+      data[i] = 255 - data[i];
+      data[i+1] = 255 - data[i+1];
+      data[i+2] = 255 - data[i+2];
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+
+  requestAnimationFrame(drawCanvas);
+}
+
+video.addEventListener('play', drawCanvas);
+
+// Controls
+document.getElementById('flipHBtn').addEventListener('click', () => flipH = !flipH);
+document.getElementById('flipVBtn').addEventListener('click', () => flipV = !flipV);
+document.getElementById('grayscaleBtn').addEventListener('click', () => grayscaleActive = !grayscaleActive);
+document.getElementById('invertBtn').addEventListener('click', () => invertActive = !invertActive);
+
+document.getElementById('brightness').addEventListener('input', e => {
+  document.getElementById('brightnessVal').textContent = e.target.value + "%";
+});
+
+document.getElementById('rotate').addEventListener('input', e => {
+  document.getElementById('rotateVal').textContent = e.target.value + "°";
+});
+</script>
+</body>
+</html>
