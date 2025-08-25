@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VideoEditBot Portable Example</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 20px;
+  }
+  video {
+    max-width: 100%;
+    margin-bottom: 10px;
+  }
+  canvas {
+    display: none;
+  }
+  input, button {
+    margin: 5px;
+  }
+</style>
+</head>
+<body>
+
+<h2>VideoEditBot Portable Example</h2>
+
+<!-- Video loader -->
+<input type="file" id="videoInput" accept="video/*">
+<br>
+
+<!-- Controls -->
+<button id="applyFilter">Apply Grayscale Filter</button>
+<button id="addText">Add Text Overlay</button>
+<button id="exportVideo">Export Video</button>
+
+<!-- Video player -->
+<video id="videoPlayer" controls></video>
+
+<!-- Canvas for editing -->
+<canvas id="editCanvas"></canvas>
+
+<script>
+const videoInput = document.getElementById('videoInput');
+const videoPlayer = document.getElementById('videoPlayer');
+const canvas = document.getElementById('editCanvas');
+const ctx = canvas.getContext('2d');
+
+let currentVideoURL = null;
+
+// Load video
+videoInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    currentVideoURL = URL.createObjectURL(file);
+    videoPlayer.src = currentVideoURL;
+});
+
+// Apply grayscale filter
+document.getElementById('applyFilter').addEventListener('click', () => {
+    canvas.width = videoPlayer.videoWidth;
+    canvas.height = videoPlayer.videoHeight;
+    videoPlayer.pause();
+
+    ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height);
+    let frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let data = frame.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+        let avg = (data[i] + data[i+1] + data[i+2]) / 3;
+        data[i] = data[i+1] = data[i+2] = avg;
+    }
+
+    ctx.putImageData(frame, 0, 0);
+    videoPlayer.src = canvas.toDataURL('video/webm');
+});
+
+// Add text overlay
+document.getElementById('addText').addEventListener('click', () => {
+    canvas.width = videoPlayer.videoWidth;
+    canvas.height = videoPlayer.videoHeight;
+    videoPlayer.pause();
+
+    ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height);
+    ctx.font = '48px Arial';
+    ctx.fillStyle = 'red';
+    ctx.fillText('Hello VideoEditBot!', 50, 100);
+
+    videoPlayer.src = canvas.toDataURL('video/webm');
+});
+
+// Export video (simple snapshot as image for demo)
+document.getElementById('exportVideo').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'edited_frame.png';
+    a.click();
+});
+</script>
+</body>
+</html>
