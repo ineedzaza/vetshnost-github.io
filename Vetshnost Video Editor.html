@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vetshnost Image Editor</title>
+<style>
+  body { font-family: Arial; background: #111; color: #eee; text-align: center; padding: 10px; }
+  canvas { border: 2px solid #333; display: block; margin: 10px auto; max-width: 95%; }
+  .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 15px; }
+  .control { background: #222; padding: 10px; border-radius: 8px; width: 250px; }
+  label { display: block; margin-top: 8px; font-size: 14px; }
+  input[type=range], input[type=number] { width: 100%; }
+  button { background: #444; color: #fff; border: none; padding: 10px 20px; margin: 15px; border-radius: 6px; cursor: pointer; }
+  button:hover { background: #666; }
+</style>
+</head>
+<body>
+<h1>Vetshnost Image Editor</h1>
+
+<input type="file" id="upload" accept="image/*"><br>
+<canvas id="editorCanvas" width="600" height="400"></canvas>
+
+<div class="controls">
+  <!-- Channel Replicator -->
+  <div class="control">
+    <h3>Channel Replicator</h3>
+    <label>Channel: R / G / B (coming soon)</label>
+  </div>
+
+  <!-- Fisheye -->
+  <div class="control">
+    <h3>Fisheye</h3>
+    <label>Radius (0-3)</label>
+    <input type="range" id="fisheyeRadius" min="0" max="3" step="0.1" value="0">
+    <label>Intensity (0-4)</label>
+    <input type="range" id="fisheyeIntensity" min="0" max="4" step="0.1" value="0">
+  </div>
+
+  <!-- HSL Adjust -->
+  <div class="control">
+    <h3>HSL</h3>
+    <label>Hue (0-360)</label>
+    <input type="range" id="hslHue" min="0" max="360" value="0">
+    <label>Saturation (-100 to 100)</label>
+    <input type="range" id="hslSat" min="-100" max="100" value="0">
+    <label>Luminosity (0-360)</label>
+    <input type="range" id="hslLum" min="0" max="360" value="0">
+  </div>
+
+  <!-- HSV Adjust -->
+  <div class="control">
+    <h3>HSV</h3>
+    <label>Hue (0-360)</label>
+    <input type="range" id="hsvHue" min="0" max="360" value="0">
+    <label>Saturation (-100 to 100)</label>
+    <input type="range" id="hsvSat" min="-100" max="100" value="0">
+    <label>Value (0-1000)</label>
+    <input type="range" id="hsvVal" min="0" max="1000" value="0">
+  </div>
+
+  <!-- LAB -->
+  <div class="control">
+    <h3>LAB Adjust</h3>
+    <label>L (0-100)</label>
+    <input type="range" id="labL" min="0" max="100" value="0">
+    <label>a* (0-10000)</label>
+    <input type="range" id="labA" min="0" max="10000" value="0">
+    <label>b* (0-10000)</label>
+    <input type="range" id="labB" min="0" max="10000" value="0">
+  </div>
+
+  <!-- LCH -->
+  <div class="control">
+    <h3>LCH</h3>
+    <label>Luminosity (0-1000)</label>
+    <input type="range" id="lchL" min="0" max="1000" value="0">
+    <label>Chroma (0-1000)</label>
+    <input type="range" id="lchC" min="0" max="1000" value="0">
+    <label>Hue (0-360)</label>
+    <input type="range" id="lchH" min="0" max="360" value="0">
+  </div>
+
+  <!-- Swirl -->
+  <div class="control">
+    <h3>Swirl</h3>
+    <label>Radius (0-10)</label>
+    <input type="range" id="swirlRadius" min="0" max="10" value="0">
+    <label>Intensity (-360 to 360)</label>
+    <input type="range" id="swirlIntensity" min="-360" max="360" value="0">
+  </div>
+
+  <!-- Waves -->
+  <div class="control">
+    <h3>Waves</h3>
+    <label>Amplitude (0-1000)</label>
+    <input type="range" id="waveAmp" min="0" max="1000" value="0">
+    <label>Frequency (0-1000)</label>
+    <input type="range" id="waveFreq" min="0" max="1000" value="0">
+    <label>Angle (-360 to 360)</label>
+    <input type="range" id="waveAngle" min="-360" max="360" value="0">
+  </div>
+
+  <!-- Transform -->
+  <div class="control">
+    <h3>Transform</h3>
+    <label>Rotate (-360 to 360)</label>
+    <input type="range" id="rotate" min="-360" max="360" value="0">
+    <label>Scale (0-10)</label>
+    <input type="range" id="scale" min="0" max="10" step="0.1" value="1">
+    <button id="flipHBtn">Flip Horizontal</button>
+    <button id="flipVBtn">Flip Vertical</button>
+  </div>
+
+  <!-- Quick Effects -->
+  <div class="control">
+    <h3>Quick Effects</h3>
+    <button id="invertBtn">Invert</button>
+    <button id="grayscaleBtn">Grayscale</button>
+  </div>
+</div>
+
+<button id="applyEffects">Apply All Effects</button>
+
+<script>
+const canvas = document.getElementById('editorCanvas');
+const ctx = canvas.getContext('2d');
+const upload = document.getElementById('upload');
+let img = new Image();
+let flipH = false, flipV = false;
+
+upload.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// Basic Effects
+document.getElementById('invertBtn').addEventListener('click', () => invertColors());
+document.getElementById('grayscaleBtn').addEventListener('click', () => grayscale());
+document.getElementById('flipHBtn').addEventListener('click', () => { flipH = !flipH; redrawImage(); });
+document.getElementById('flipVBtn').addEventListener('click', () => { flipV = !flipV; redrawImage(); });
+
+function invertColors() {
+  let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  let d = imageData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    d[i] = 255 - d[i];
+    d[i+1] = 255 - d[i+1];
+    d[i+2] = 255 - d[i+2];
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function grayscale() {
+  let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  let d = imageData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    let gray = (d[i] + d[i+1] + d[i+2]) / 3;
+    d[i] = d[i+1] = d[i+2] = gray;
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function redrawImage() {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.translate(canvas.width/2, canvas.height/2);
+  ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+  ctx.drawImage(img, -img.width/2, -img.height/2);
+  ctx.restore();
+}
+
+document.getElementById('applyEffects').addEventListener('click', () => {
+  redrawImage();
+  // Here you would apply HSL, HSV, LAB, Fisheye, Swirl, Waves using pixel manipulation or distortion algorithms
+});
+</script>
+</body>
+</html>
