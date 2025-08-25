@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CapCut Portable HTML Example</title>
+<style>
+  body { font-family: Arial; display: flex; flex-direction: column; align-items: center; margin: 20px; }
+  video, canvas { max-width: 100%; margin: 10px 0; }
+  input, button, select { margin: 5px; }
+</style>
+</head>
+<body>
+
+<h2>CapCut Portable HTML Example</h2>
+
+<input type="file" id="videoInput" accept="video/*">
+<br>
+
+<!-- Video Controls -->
+<video id="videoPlayer" controls></video>
+<canvas id="editCanvas"></canvas>
+
+<!-- Effects -->
+<select id="filterSelect">
+  <option value="none">None</option>
+  <option value="grayscale">Grayscale</option>
+  <option value="invert">Invert</option>
+  <option value="sepia">Sepia</option>
+  <option value="brightness">Brightness +50%</option>
+  <option value="contrast">Contrast +50%</option>
+</select>
+<input type="text" id="textOverlay" placeholder="Add text overlay">
+<br>
+<label>Speed: </label>
+<input type="range" id="speedRange" min="0.1" max="3" step="0.1" value="1">
+<br>
+<label>Audio Pitch: </label>
+<input type="range" id="audioPitch" min="-12" max="12" step="1" value="0">
+<br>
+<button id="applyEffects">Apply Effects</button>
+<button id="exportVideo">Export Video</button>
+
+<script>
+const videoInput = document.getElementById('videoInput');
+const videoPlayer = document.getElementById('videoPlayer');
+const canvas = document.getElementById('editCanvas');
+const ctx = canvas.getContext('2d');
+let audioContext, sourceNode, pitchNode;
+
+let videoFileURL = null;
+
+videoInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    videoFileURL = URL.createObjectURL(file);
+    videoPlayer.src = videoFileURL;
+});
+
+function applyFilter(frame, filter) {
+    let data = frame.data;
+    for (let i = 0; i < data.length; i += 4) {
+        let r = data[i], g = data[i+1], b = data[i+2];
+        switch(filter) {
+            case 'grayscale':
+                let avg = (r+g+b)/3; data[i]=data[i+1]=data[i+2]=avg; break;
+            case 'invert':
+                data[i]=255-r; data[i+1]=255-g; data[i+2]=255-b; break;
+            case 'sepia':
+                data[i]=r*0.393+g*0.769+b*0.189;
+                data[i+1]=r*0.349+g*0.686+b*0.168;
+                data[i+2]=r*0.272+g*0.534+b*0.131; break;
+            case 'brightness':
+                data[i]+=128; data[i+1]+=128; data[i+2]+=128; break;
+            case 'contrast':
+                let factor = (259*(128+128))/(255*(259-128));
+                data[i]=factor*(r-128)+128;
+                data[i+1]=factor*(g-128)+128;
+                data[i+2]=factor*(b-128)+128; break;
+        }
+    }
+    return frame;
+}
+
+document.getElementById('applyEffects').addEventListener('click', () => {
+    canvas.width = videoPlayer.videoWidth;
+    canvas.height = videoPlayer.videoHeight;
+    videoPlayer.pause();
+
+    ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height);
+    let frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    const filter = document.getElementById('filterSelect').value;
+    const text = document.getElementById('textOverlay').value;
+
+    frame = applyFilter(frame, filter);
+    ctx.putImageData(frame, 0, 0);
+
+    if (text) {
+        ctx.font = '48px Arial';
+        ctx.fillStyle = 'red';
+        ctx.fillText(text, 50, 100);
+    }
+});
+
+document.getElementById('exportVideo').addEventListener('click', () => {
+    // Simple export: snapshot as PNG (video export requires ffmpeg.js or similar)
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'edited_frame.png';
+    a.click();
+});
+
+// Audio pitch example (requires Web Audio API)
+document.getElementById('audioPitch').addEventListener('input', e => {
+    if(!audioContext){
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        sourceNode = audioContext.createMediaElementSource(videoPlayer);
+        pitchNode = audioContext.createBiquadFilter();
+        sourceNode.connect(audioContext.destination);
+    }
+    pitchNode.detune.value = e.target.value * 100; // semi-tone pitch shift
+});
+</script>
+
+</body>
+</html>
