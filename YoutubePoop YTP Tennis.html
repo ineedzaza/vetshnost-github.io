@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Poop Example</title>
+<style>
+  body { background: #111; color: #fff; font-family: Arial; text-align: center; }
+  video, canvas { border: 2px solid #444; margin: 10px auto; display: block; max-width: 90%; }
+  button { margin: 5px; padding: 8px 12px; border-radius: 6px; border: none; background: #444; color: white; cursor: pointer; }
+  button:hover { background: #666; }
+</style>
+</head>
+<body>
+<h1>YouTube Poop HTML Example</h1>
+<input type="file" id="videoUpload" accept="video/*"><br>
+<video id="video" controls></video>
+<canvas id="canvas" width="640" height="360"></canvas>
+<br>
+<button onclick="playReverse()">Play Reverse</button>
+<button onclick="speedUp()">Speed x2</button>
+<button onclick="speedNormal()">Normal Speed</button>
+<button onclick="addTextOverlay()">Add Meme Text</button>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let interval;
+let textOverlay = false;
+
+document.getElementById('videoUpload').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const url = URL.createObjectURL(file);
+    video.src = url;
+});
+
+// Draw video to canvas for effects
+function drawCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    if(textOverlay){
+        ctx.fillStyle = "yellow";
+        ctx.font = "40px Impact";
+        ctx.fillText("YTP Meme!", 50, 50);
+    }
+    requestAnimationFrame(drawCanvas);
+}
+
+video.addEventListener('play', drawCanvas);
+
+// YTP style functions
+function playReverse(){
+    video.pause();
+    let current = video.currentTime;
+    interval = setInterval(()=>{
+        if(current <= 0){ clearInterval(interval); video.pause(); }
+        else { current -= 0.04; video.currentTime = current; }
+    }, 40);
+}
+
+function speedUp(){
+    video.playbackRate = 2.0;
+}
+
+function speedNormal(){
+    video.playbackRate = 1.0;
+}
+
+function addTextOverlay(){
+    textOverlay = !textOverlay;
+}
+</script>
+</body>
+</html>
