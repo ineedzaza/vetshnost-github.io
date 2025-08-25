@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FFmpeg All Effects HTML Example</title>
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.4/dist/ffmpeg.min.js"></script>
+<style>
+  body { font-family: Arial; text-align: center; margin: 20px; }
+  video { max-width: 100%; margin: 10px 0; }
+  input, button, select { margin: 5px; }
+</style>
+</head>
+<body>
+
+<h2>FFmpeg All Effects HTML Example</h2>
+
+<input type="file" id="videoInput" accept="video/*"><br>
+
+<!-- Effect options -->
+<select id="filterSelect">
+  <option value="none">None</option>
+  <option value="hue=s=0">Grayscale</option>
+  <option value="negate">Invert</option>
+  <option value="hue=h=60">Hue Shift</option>
+  <option value="eq=brightness=0.06:contrast=1.5">Brightness/Contrast</option>
+  <option value="vignette">Vignette</option>
+  <option value="mirror">Mirror</option>
+</select>
+<br>
+
+<button id="applyEffects">Apply Effects & Render</button>
+<br>
+
+<video id="videoPlayer" controls></video>
+
+<script>
+const { createFFmpeg, fetchFile } = FFmpeg;
+const ffmpeg = createFFmpeg({ log: true });
+
+const videoInput = document.getElementById('videoInput');
+const videoPlayer = document.getElementById('videoPlayer');
+const filterSelect = document.getElementById('filterSelect');
+
+let videoFile = null;
+
+videoInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    videoFile = file;
+    videoPlayer.src = URL.createObjectURL(file);
+});
+
+document.getElementById('applyEffects').addEventListener('click', async () => {
+    if (!videoFile) return alert('Please select a video first.');
+
+    if (!ffmpeg.isLoaded()) await ffmpeg.load();
+
+    ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(videoFile));
+
+    let filter = filterSelect.value;
+    let filterArg = filter !== 'none' ? ['-vf', filter] : [];
+
+    await ffmpeg.run(
+        '-i', 'input.mp4',
+        ...filterArg,
+        'output.mp4'
+    );
+
+    const data = ffmpeg.FS('readFile', 'output.mp4');
+    const videoURL = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+    videoPlayer.src = videoURL;
+    alert('Video rendered with selected effect!');
+});
+</script>
+
+</body>
+</html>
