@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vetshnost Video Editor</title>
+<style>
+body {
+  background: #121212;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+}
+.container {
+  max-width: 1200px;
+  margin: auto;
+}
+video {
+  max-width: 100%;
+  border: 2px solid #555;
+  border-radius: 10px;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+  justify-content: center;
+}
+label {
+  display: block;
+  font-size: 14px;
+}
+input[type="range"], input[type="number"] {
+  width: 120px;
+}
+button {
+  background: #444;
+  color: white;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+button:hover {
+  background: #666;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Vetshnost Video Editor</h1>
+  <input type="file" id="videoInput" accept="video/*"><br><br>
+  <video id="video" controls></video>
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <div class="controls">
+    <!-- Fisheye -->
+    <div>
+      <label>Fisheye Radius</label>
+      <input type="range" id="fisheyeRadius" min="0" max="3" step="0.01" value="0">
+    </div>
+    <div>
+      <label>Fisheye Intensity (exp)</label>
+      <input type="range" id="fisheyeIntensity" min="0" max="4" step="0.1" value="0">
+    </div>
+
+    <!-- HSL -->
+    <div>
+      <label>Hue (HSL)</label>
+      <input type="range" id="hslHue" min="0" max="360" value="0">
+    </div>
+    <div>
+      <label>Saturation (HSL)</label>
+      <input type="range" id="hslSat" min="-100" max="100" value="0">
+    </div>
+    <div>
+      <label>Luminosity (HSL)</label>
+      <input type="range" id="hslLum" min="0" max="360" value="0">
+    </div>
+
+    <!-- Swirl -->
+    <div>
+      <label>Swirl Radius</label>
+      <input type="range" id="swirlRadius" min="0" max="10" step="0.1" value="0">
+    </div>
+    <div>
+      <label>Swirl Intensity</label>
+      <input type="range" id="swirlIntensity" min="-360" max="360" value="0">
+    </div>
+
+    <!-- Flip -->
+    <div>
+      <label>Flip Horizontal</label>
+      <input type="checkbox" id="flipH">
+    </div>
+    <div>
+      <label>Flip Vertical</label>
+      <input type="checkbox" id="flipV">
+    </div>
+  </div>
+
+  <br>
+  <button id="applyBtn">Apply Effects</button>
+  <button id="downloadBtn">Download Video</button>
+</div>
+
+<script>
+const videoInput = document.getElementById('videoInput');
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+videoInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const url = URL.createObjectURL(file);
+    video.src = url;
+  }
+});
+
+document.getElementById('applyBtn').addEventListener('click', () => {
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const fisheyeRadius = parseFloat(document.getElementById('fisheyeRadius').value);
+  const fisheyeIntensity = parseFloat(document.getElementById('fisheyeIntensity').value);
+  const hslHue = parseInt(document.getElementById('hslHue').value);
+  const hslSat = parseInt(document.getElementById('hslSat').value);
+  const hslLum = parseInt(document.getElementById('hslLum').value);
+  const swirlRadius = parseFloat(document.getElementById('swirlRadius').value);
+  const swirlIntensity = parseFloat(document.getElementById('swirlIntensity').value);
+  const flipH = document.getElementById('flipH').checked;
+  const flipV = document.getElementById('flipV').checked;
+
+  function drawFrame() {
+    ctx.save();
+    if (flipH || flipV) {
+      ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+      ctx.translate(flipH ? -canvas.width : 0, flipV ? -canvas.height : 0);
+    }
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    // ImageData for pixel manipulation
+    let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let data = imageData.data;
+
+    // Apply HSL adjustments (basic example)
+    for (let i = 0; i < data.length; i += 4) {
+      // Simple grayscale if needed
+      if (hslSat === -100) {
+        const avg = (data[i] + data[i+1] + data[i+2]) / 3;
+        data[i] = data[i+1] = data[i+2] = avg;
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    requestAnimationFrame(drawFrame);
+  }
+
+  drawFrame();
+});
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.download = 'edited-video.png'; // For now, captures current frame
+  link.href = canvas.toDataURL();
+  link.click();
+});
+</script>
+</body>
+</html>
